@@ -1,1 +1,1 @@
-# -AT-kittens_collocations
+# CAT&kittens: the database and the collocation extraction code
