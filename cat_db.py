@@ -35,6 +35,12 @@ def sql(scriptname):
 
 
 def delete_text(text_id):
+    """
+    Deletes a text by id and updates related frequency values of the unigrams presenting in the text.
+    :param text_id: int
+    :return:
+    """
+
     c = cnx.cursor()
     c.execute(
         """
@@ -442,9 +448,9 @@ def fetch_3grams(domain):
     cursor.execute(command.format(*[domain]*7))
     data = cursor.fetchall()
     with open('trigrams_d{}.csv'.format(domain), 'a', encoding='utf-8') as f:
-       for line in data:
-           line = [str(i) for i in line]
-           f.write('\t'.join(line) + '\n')
+        for line in data:
+            line = [str(i) for i in line]
+            f.write('\t'.join(line) + '\n')
 
 
 def create_token_tables():
@@ -480,6 +486,7 @@ def c_val_5grams(domain):
     command = sql('cval_5grams.sql').format(*[domain]*3)
     cursor.execute(command)
     data = cursor.fetchall()
+
     log.info('fetched!')
 
     for line in data:
@@ -662,6 +669,56 @@ def fetch_cvalued_4grams(domain):
             f.write('\t'.join(row) + '\n')
 
 
+def fetch_cvalued_5grams(domain):
+    try:
+        cursor.execute("""ALTER TABLE `cat`.`5grams` 
+                            ADD INDEX `d{}_logdice_desc` (`d{}_logdice` DESC) VISIBLE""".format(*[domain]*2))
+    except ProgrammingError:
+        pass
+    cursor.execute(sql('fetching_cvalued_5grams.sql').format(*[domain]*11))
+    with open('d{}_5grams_cvalued.csv'.format(domain), 'a', encoding='utf-8') as f:
+        f.write('\t'.join(
+            ['id_5gram',
+             'w1', 'pos1',
+             'w2', 'pos2',
+             'w3', 'pos3',
+             'w4', 'pos4',
+             'w5', 'pos5',
+             'd{}_freq'.format(domain),
+             'd{}_pmi'.format(domain),
+             'd{}_logdice'.format(domain),
+             'd{}_t-score'.format(domain),
+             'd{}_c-value'.format(domain)]) + '\n')
+        for line in cursor:
+            row = [str(i) for i in line]
+            f.write('\t'.join(row) + '\n')
+
+
+def fetch_cvalued_6grams(domain):
+    try:
+        cursor.execute("""ALTER TABLE `cat`.`6grams` 
+                            ADD INDEX `d{}_logdice_desc` (`d{}_logdice` DESC) VISIBLE""".format(*[domain]*2))
+    except ProgrammingError:
+        pass
+    cursor.execute(sql('fetching_6grams.sql').format(*[domain]*10))
+    with open('d{}_6grams_cvalued.csv'.format(domain), 'a', encoding='utf-8') as f:
+        f.write('\t'.join(
+            ['id_6gram',
+             'w1', 'pos1',
+             'w2', 'pos2',
+             'w3', 'pos3',
+             'w4', 'pos4',
+             'w5', 'pos5',
+             'w6', 'pos6',
+             'd{}_freq'.format(domain),
+             'd{}_pmi'.format(domain),
+             'd{}_logdice'.format(domain),
+             'd{}_t-score'.format(domain)]) + '\n')
+        for line in cursor:
+            row = [str(i) for i in line]
+            f.write('\t'.join(row) + '\n')
+
+
 def count_all_domains_bigr(minimum=1):
     """
 
@@ -712,31 +769,26 @@ def count_all_domains_bigr(minimum=1):
     log.info('Metrics for bigram in all corpus are commited!')
 
 
-def change_date():
-    cursor.execute("insert into lemmas value (0, '<DATE>', 528, 0,0,0,0,0,0, 0)")
-
-
 def main():
-    # Adding meta
-    for root, dirs, files in os.walk('meta'):
-        for f in files:
-            if f.endswith('csv'):
-                write_meta(os.path.join(root, f), cnx, cursor)
-
-    # Adding texts
-    for root, dirs, files in os.walk('corpus'):
-        for d in dirs:
-            for fn in os.listdir(os.path.join(root, d)):
-                if fn.endswith('conllu'):
-                    write_text(os.path.join(root, d, fn), d, cursor, cnx)
+    # # Adding meta
+    # for root, dirs, files in os.walk('meta'):
+    #     for f in files:
+    #         if f.endswith('csv'):
+    #             write_meta(os.path.join(root, f), cnx, cursor)
+    #
+    # # Adding texts
+    # for root, dirs, files in os.walk('corpus'):
+    #     for d in dirs:
+    #         for fn in os.listdir(os.path.join(root, d)):
+    #             if fn.endswith('conllu'):
+    #                 write_text(os.path.join(root, d, fn), d, cursor, cnx)
 
     #count_bigrams(1, 3)
     #count_bigrams(1, 3)
     #fetch_cvalued_2grams_which_in_3grams()
-    for i in [1, 3, 4, 5, 6]:
-        if i:
-            print(i)
-            fetch_cvalued_4grams(i)
+
+    fetch_cvalued_6grams(3)
+    fetch_cvalued_6grams(2)
     #    count_2metrics(i)
     #    get_n_count_3grams(i)
     #    get_n_count_4grams(i)
